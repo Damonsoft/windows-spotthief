@@ -53,7 +53,7 @@ namespace SpotThief
         public void RefreshWorkDir()
         {
             // Get a path to a random string encoded folder
-            workDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), System.IO.Path.GetFileNameWithoutExtension(System.IO.Path.GetRandomFileName()));
+            workDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "SpotThief");
             // Create said folder :)
             Directory.CreateDirectory(workDir);
         }
@@ -70,48 +70,37 @@ namespace SpotThief
             // Get a list of files in the windows hello folder...
             string[] files = Directory.GetFiles(helloDir);
             // For each file...
-            foreach (string file in files)
+            foreach (string inFile in files)
             {
+                // Create the copy path. also giving the copy a nice name
+                string outFile = System.IO.Path.Combine(workDir, "wallpaper(" + imageCount++ + ").jpg");
+
                 try
                 {
                     // Make a copy in our temp folder...Also changing the destination file to a jpg...
-                    File.Copy(file, System.IO.Path.Combine(workDir, "wallpaper(" + imageCount++ + ").jpg"));
-                }
-                catch (System.IO.IOException)
-                {
-                    // If we can't get the file ignore it...
-                    continue;
-                }
-            }
-            // Now get the list of files in our folder that made it...
-            files = Directory.GetFiles(workDir);
-            //For each file...
-            foreach (string file in files)
-            {
-                // Open the image...
-                try
-                {
-                    BitmapImage item = new BitmapImage(new Uri(file));
-                    // Check to make sure it's a wallpaper...
-                    if (item.Width != item.Height &&
-                        !(item.Width <= 300) &&
-                        !(item.Height <= 300))
+                    File.Copy(inFile, outFile, true);
+                    // Try opening the file to see if it's valid... 
+                    BitmapImage image = new BitmapImage(new Uri(outFile));
+                    // If so check some dimension to make sure it's an actual wallpaper
+                    if ((image.Width != image.Height) && !(image.Width <= 300) && !(image.Height <= 300))
                     {
                         // Add the file to the list...
-                        wallpapers.Add(file);
+                        wallpapers.Add(outFile);
                         // Create a new node presenting the file...
                         TreeViewItem node = new TreeViewItem();
                         // Set it's header as the file name...
-                        node.Header = System.IO.Path.GetFileName(file);
+                        node.Header = System.IO.Path.GetFileName(outFile);
                         // Set it's freaking color :(
                         node.Foreground = new SolidColorBrush(Colors.White);
                         // Add it to the tree view...
                         ((TreeViewItem)FileView.Items[0]).Items.Add(node);
                     }
+                    // Close the image
+                    image.UriSource = null;
                 }
-                catch (Exception)
+                catch (System.NotSupportedException)
                 {
-                    // Not all files are image files...
+                    // If we can't get the file ignore it...
                     continue;
                 }
             }
@@ -124,7 +113,7 @@ namespace SpotThief
             // Get it's text...
             currNodeName = item.Header.ToString();
             // If it's the root node then ignore it...
-            if (currNodeName != rootNodeName)
+            if (currNodeName != rootNodeName && !(item == FileView.Items[0]))
             {
                 // Otherwise open the file for viewing...
                 currNodeName = System.IO.Path.Combine(workDir, currNodeName);
@@ -135,47 +124,29 @@ namespace SpotThief
 
         private void Saveas_Click(object sender, RoutedEventArgs e)
         {
-            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
-            dlg.FileName = System.IO.Path.GetFileName(currNodeName); // Default file name
-            dlg.DefaultExt = ".jpg"; // Default file extension
-            dlg.Filter = "Picture Documents (.jpg)|*.jpg"; // Filter files by extension
-
-            // Show save file dialog box
-            Nullable<bool> result = dlg.ShowDialog();
-
-            // Process save file dialog box results
-            if (result == true)
+            if(FileView.SelectedItem != FileView.Items[0])
             {
-                // Copy the file to that path...
-                File.Copy(currNodeName, dlg.FileName);
+                Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+                dlg.FileName = System.IO.Path.GetFileName(currNodeName); // Default file name
+                dlg.DefaultExt = ".jpg"; // Default file extension
+                dlg.Filter = "Picture Documents (.jpg)|*.jpg"; // Filter files by extension
+
+                // Show save file dialog box
+                Nullable<bool> result = dlg.ShowDialog();
+
+                // Process save file dialog box results
+                if (result == true)
+                {
+                    // Copy the file to that path...
+                    File.Copy(currNodeName, dlg.FileName);
+                }
             }
+
         }
 
         private void About_Click(object sender, RoutedEventArgs e)
         {
-
-        }
-
-        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            try
-            {
-                // Get a list of all files...
-                string[] files = Directory.GetFiles(workDir);
-
-                foreach (string file in files)
-                {
-                    // Delete em all :)
-                    File.SetAttributes(file, FileAttributes.Normal);
-                    File.Delete(file);
-                }
-                // Finally kill our temp dir *-|===>
-                Directory.Delete(workDir, false);
-            }
-            catch(Exception)
-            {
-                // :(
-            }
+            MessageBox.Show("Spotthief version: 1.5\nLink: https://www.github.com/Damonsoft/windows-spotthief", "About", MessageBoxButton.OK, MessageBoxImage.Question);
         }
     }
 }
